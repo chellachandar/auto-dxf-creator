@@ -1,8 +1,4 @@
 import streamlit as st
-from pathlib import Path
-import subprocess
-import tempfile
-import os
 
 st.set_page_config(
     page_title="Electrical Symbol Generator",
@@ -13,61 +9,43 @@ st.set_page_config(
 st.title("⚡ Electrical Symbol Drawing Generator")
 st.write("Create DXF drawings with electrical symbols")
 
-# Info sections
-st.info("""
-### How it works:
-1. Download symbols from GitHub
-2. Convert SVG → DXF
-3. Create your drawing
-4. Download the DXF file
-""")
-
 # Tabs
-tab1, tab2, tab3, tab4 = st.tabs(["About", "Symbols", "Create Drawing", "Help"])
+tab1, tab2, tab3 = st.tabs(["About", "Symbols", "Create Drawing"])
 
 with tab1:
     st.header("About This App")
     st.write("""
     This app helps you create electrical drawings with IEC 60617 symbols.
     
-    **Symbols from**: chille/electricalsymbols (GitHub)
-    
     **Available symbols**:
-    - Circuit Breaker (CB)
-    - Disconnect Switch (DS)
-    - Earthing Switch (ES)
-    - Lightning Arrester (LA)
-    - Reactor (L)
-    - Current Transformer (CT)
-    - Voltage Transformer (VT)
-    - And 140+ more!
+    - CB: Circuit Breaker
+    - DS: Disconnect Switch
+    - ES: Earthing Switch
+    - LA: Lightning Arrester
+    - L: Reactor
+    - CT: Current Transformer
+    - VT: Voltage Transformer
     """)
 
 with tab2:
     st.header("Available Symbols")
-    st.write("### Common IEC 60617 Electrical Symbols")
+    st.write("""
+    ### IEC 60617 Electrical Symbols
     
-    symbols_info = {
-        "cb": "Circuit Breaker - Switches on/off",
-        "ds": "Disconnect Switch - Manual disconnect",
-        "es": "Earthing Switch - Safety ground",
-        "la": "Lightning Arrester - Overvoltage protection",
-        "reactor": "Reactor - Inductance (coil)",
-        "ct": "Current Transformer - Measurement",
-        "vt": "Voltage Transformer - Voltage measurement",
-        "busbar": "Busbar - Main conductor",
-        "ground": "Ground - Earth symbol",
-        "junction": "Junction - Connection point",
-    }
-    
-    cols = st.columns(2)
-    for idx, (symbol, description) in enumerate(symbols_info.items()):
-        with cols[idx % 2]:
-            st.write(f"**{symbol.upper()}**: {description}")
+    | Symbol | Name |
+    |--------|------|
+    | CB | Circuit Breaker |
+    | DS | Disconnect Switch |
+    | ES | Earthing Switch |
+    | LA | Lightning Arrester |
+    | L | Reactor |
+    | CT | Current Transformer |
+    | VT | Voltage Transformer |
+    | GND | Ground |
+    """)
 
 with tab3:
-    st.header("Create Your Drawing")
-    
+    st.header("Create DXF Drawing")
     st.write("### Quick Drawing Creator")
     
     col1, col2 = st.columns(2)
@@ -78,122 +56,98 @@ with tab3:
     with col2:
         num_symbols = st.slider("Number of symbols:", 1, 5, 2)
     
-    symbols = []
+    symbols_list = []
     for i in range(num_symbols):
-        symbol = st.text_input(f"Symbol {i+1}:", f"Symbol{i+1}")
-        symbols.append(symbol)
+        sym = st.text_input(f"Symbol {i+1}:", "CB")
+        symbols_list.append(sym)
     
     if st.button("📐 Create Drawing", use_container_width=True):
-        try:
-            import ezdxf
-            
-            # Create DXF
-            doc = ezdxf.new('R2018')
-            msp = doc.modelspace()
-            
-            # Add title
-            msp.add_text(
-                title,
-                dxfattribs={'insert': (0, 30), 'height': 3}
-            )
-            
-            # Add symbols as circles with labels
-            y_pos = 15
-            for symbol in symbols:
-                # Draw symbol (simplified - circle)
-                msp.add_circle((5, y_pos), radius=2)
-                
-                # Add label
-                msp.add_text(
-                    symbol.upper(),
-                    dxfattribs={'insert': (2, y_pos - 1), 'height': 1.5}
-                )
-                
-                # Add connection lines
-                msp.add_line((5, y_pos + 2), (5, y_pos + 4))
-                msp.add_line((5, y_pos - 2), (5, y_pos - 4))
-                
-                y_pos -= 10
-            
-            # Save to temporary file
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.dxf') as tmp:
-                doc.saveas(tmp.name)
-                tmp_path = tmp.name
-            
-            # Read file
-            with open(tmp_path, 'rb') as f:
-                dxf_data = f.read()
-            
-            # Cleanup
-            os.remove(tmp_path)
-            
-            st.success("✓ Drawing created successfully!")
-            
-            # Download button
-            st.download_button(
-                label="📥 Download DXF File",
-                data=dxf_data,
-                file_name=f"{title.replace(' ', '_')}.dxf",
-                mime="application/octet-stream",
-                use_container_width=True
-            )
-            
-            st.info("👇 Click the download button above to save the file")
-            
-        except Exception as e:
-            st.error(f"Error creating drawing: {str(e)}")
+        # Create simple DXF file
+        dxf_content = create_simple_dxf(title, symbols_list)
+        
+        st.success("✓ Drawing created!")
+        
+        st.download_button(
+            label="📥 Download DXF File",
+            data=dxf_content,
+            file_name=f"{title.replace(' ', '_')}.dxf",
+            mime="application/octet-stream",
+            use_container_width=True
+        )
 
-with tab4:
-    st.header("Help & FAQ")
+def create_simple_dxf(title, symbols):
+    """Create a simple DXF file content as text"""
     
-    st.write("### Common Questions")
+    dxf = """  0
+SECTION
+  2
+HEADER
+  9
+$ACADVER
+  1
+AC1021
+  9
+$EXTMIN
+ 10
+0.0
+ 20
+0.0
+  9
+$EXTMAX
+ 10
+100.0
+ 20
+100.0
+  0
+ENDSEC
+  0
+SECTION
+  2
+ENTITIES
+"""
     
-    with st.expander("What is DXF?"):
-        st.write("""
-        DXF (Drawing Exchange Format) is a standard file format for CAD drawings.
-        You can open DXF files in:
-        - AutoCAD
-        - LibreCAD (free)
-        - QCAD (free)
-        - Online viewers
-        """)
+    # Add title text
+    dxf += f"""  0
+TEXT
+  8
+0
+ 10
+10.0
+ 20
+80.0
+ 40
+5.0
+  1
+{title}
+  0
+"""
     
-    with st.expander("What are IEC 60617 symbols?"):
-        st.write("""
-        IEC 60617 is the international standard for electrical symbols.
-        These symbols are used worldwide in electrical diagrams.
-        """)
+    # Add symbols as text
+    y_pos = 60
+    for i, symbol in enumerate(symbols):
+        dxf += f"""TEXT
+  8
+0
+ 10
+10.0
+ 20
+{y_pos}
+ 40
+3.0
+  1
+{symbol}
+  0
+"""
+        y_pos -= 15
     
-    with st.expander("Can I edit the DXF file?"):
-        st.write("""
-        Yes! Download and open in LibreCAD (free) or AutoCAD.
-        Then edit as you would any CAD drawing.
-        """)
+    # End of DXF
+    dxf += """ENDSEC
+  0
+EOF
+"""
     
-    with st.expander("Where do symbols come from?"):
-        st.write("""
-        From chille/electricalsymbols on GitHub.
-        License: MIT (free to use)
-        """)
+    return dxf
 
 # Footer
 st.divider()
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.write("**Made with**")
-    st.caption("Streamlit")
-    st.caption("ezdxf")
-
-with col2:
-    st.write("**Symbols from**")
-    st.caption("chille/electricalsymbols")
-    st.caption("IEC 60617")
-
-with col3:
-    st.write("**Open Source**")
-    st.caption("GitHub")
-    st.caption("Free tools")
-
-st.write("\n💡 No installation needed - runs on cloud!")
+st.write("💡 Simple DXF creator - no installation needed!")
